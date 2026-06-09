@@ -186,6 +186,48 @@ Completado el Slice 0.5, los siguientes slices implementan el pipeline MVP compl
 | 1.3 | HU-007, HU-009, HU-012 | `PlateDetector` + OCR Backends | 1.2 |
 | 1.4 | HU-020, HU-017 | `SQLiteOutput` + pipeline wiring | 1.3 |
 
+### Slice 1.0: ROI estático sin GUI en el edge
+
+| Campo | Detalle |
+|-------|---------|
+| **Slice** | 1.0 |
+| **HU** | HU-002 |
+| **Depende de** | Slice 0.5 |
+| **Archivos** | `src/gryps/preprocessors/base.py`, `src/gryps/preprocessors/roi/static.py`, `src/gryps/utils/roi.py`, `src/gryps/tools/calibrate.py`, `tests/unit/test_roi_preprocessor.py`, `tests/unit/test_calibrate_tool.py` |
+| **Eventos nuevos / contratos** | No introduce eventos nuevos. `ROIStatic` recibe frame + metadata y devuelve frame recortado + metadata enriquecida. |
+| **Criterio de éxito** | El técnico genera `config/roi.yaml` con la herramienta de calibración; luego el edge carga `ROIStatic` headless y aplica esa ROI sin abrir ventanas. |
+| **Tests** | Validación/crop de ROI, carga de `roi.yaml`, metadata de `ROIStatic`, manifest del plugin, escritura de YAML de calibración y errores de OpenCV diferido. |
+| **Documentación / trazabilidad** | HU-002 en `docs/HISTORIAS_USUARIO.md`; arquitectura §5 y §7. |
+| **Duración estimada** | 1-2 días hábiles |
+
+#### Camino feliz HU-002
+
+1. El técnico toma o recibe una imagen de referencia de la cámara.
+2. En una laptop con entorno gráfico, ejecuta la herramienta de calibración y selecciona una ROI rectangular:
+
+   ```bash
+   python -m gryps.tools.calibrate referencia.jpg --output config/roi.yaml
+   ```
+
+3. La herramienta escribe un YAML compatible con runtime:
+
+   ```yaml
+   roi:
+     x: 100
+     y: 80
+     width: 640
+     height: 360
+   ```
+
+4. En el edge, `ROIStatic` carga `config/roi.yaml`, recorta cada frame y agrega `roi_applied` y `preprocessors_applied` a la metadata.
+5. Si falta `config/roi.yaml`, el runtime falla con un mensaje accionable para ejecutar la calibración fuera del edge.
+
+#### Fuera de alcance del Slice 1.0
+
+- Cableado automático del preprocessor en perfiles o configuración de streams.
+- ROI poligonal, PTZ, auto-motion o dewarping.
+- Tests de GUI real con OpenCV; la GUI queda detrás de una frontera diferida para mantener CI headless.
+
 ---
 
 ## 5. Estrategia de Tests

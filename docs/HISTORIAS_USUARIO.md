@@ -418,7 +418,7 @@
 | ID | Historia | Épica | Prioridad | Fase | Componente Arquitectónico | Estado |
 |----|----------|-------|-----------|------|--------------------------|--------|
 | HU-001 | Fuente de video | Ingesta | Must | MVP | `streams/base.py`, `streams/file_stream`, `usb_stream`, `rtsp_stream` | Planificado |
-| HU-002 | ROI sin GUI | Ingesta | Must | MVP | `preprocessors/roi/`, `tools/calibrate.py` | Planificado |
+| HU-002 | ROI sin GUI | Ingesta | Must | MVP | `preprocessors/roi/`, `tools/calibrate.py` | En progreso |
 | HU-003 | Perfil de hardware | Ingesta | Must | MVP | `config/profiles.py`, `core/registry.py` | Planificado |
 | HU-004 | Tipo de cámara | Ingesta | Must | MVP (arquitectura) | `core/pipeline_orchestrator.py`, `streams/base.py` | Planificado |
 | HU-005 | Detectar vehículos | Detección | Must | MVP | `plugins/detectors/vehicle_yolo/` | Planificado |
@@ -469,7 +469,7 @@ A partir del Slice 1.0, cada slice se vincula explícitamente a una o más HUs:
 
 | Slice | HU(s) | Descripción | ARQUITECTURA § | Tests | Estado |
 |-------|-------|-------------|----------------|-------|--------|
-| 1.0 | HU-002 | ROI estático desde YAML + herramienta de calibración | §5, §7 | `tests/integration/test_roi.py` | Planificado |
+| 1.0 | HU-002 | ROI estático desde YAML + herramienta de calibración | §5, §7 | `tests/unit/test_roi_preprocessor.py`, `tests/unit/test_calibrate_tool.py` | En progreso |
 | 1.1 | HU-005 | Detección de vehículos con YOLO | §7 | `tests/integration/test_vehicle_yolo.py` | Planificado |
 | 1.2 | HU-006, HU-010, HU-011 | Tracking de mejor-frame y cache por track_id | §7 | `tests/integration/test_plate_tracker.py` | Planificado |
 | 1.3 | HU-007, HU-009, HU-012 | Detección de placas + OCR (Paddle/Tesseract) | §7 | `tests/integration/test_plate_ocr.py` | Planificado |

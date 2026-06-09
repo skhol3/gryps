@@ -114,6 +114,17 @@ class TestROIStatic:
         assert next_metadata["roi_applied"] == [1, 1, 2, 2]
         assert "roi_applied" not in metadata
 
+    def test_process_does_not_enrich_metadata_when_crop_fails(self, tmp_path: Path) -> None:
+        path = write_roi(tmp_path / "roi.yaml", "x: 1\ny: 1\nwidth: 3\nheight: 3\n")
+        plugin = ROIStatic(config_path=path)
+        metadata = {"frame_ref": "mem://file/0", "preprocessors_applied": ("existing",)}
+        frame = [[1, 2], [3, 4]]
+
+        with pytest.raises(ConfigError, match="roi.yaml bounds exceed frame dimensions"):
+            plugin.process(frame, metadata)
+
+        assert metadata == {"frame_ref": "mem://file/0", "preprocessors_applied": ("existing",)}
+
     def test_modifies_geometry(self, tmp_path: Path) -> None:
         plugin = ROIStatic(config_path=write_roi(tmp_path / "roi.yaml"))
 
