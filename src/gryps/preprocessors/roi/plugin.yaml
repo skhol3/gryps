@@ -1,0 +1,5 @@
+name: roi_static
+version: 1.0.0
+type: preprocessor
+entrypoint: static.py
+class: ROIStatic
