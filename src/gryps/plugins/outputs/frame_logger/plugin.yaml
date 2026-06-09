@@ -1,0 +1,5 @@
+name: frame_logger
+version: 1.0.0
+type: output
+entrypoint: output.py
+class: FrameLogger
