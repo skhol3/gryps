@@ -1,0 +1,5 @@
+name: dummy_plugin
+version: 1.0.0
+type: test
+entrypoint: plugin.py
+class: DummyPlugin
