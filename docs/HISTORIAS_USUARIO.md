@@ -448,4 +448,35 @@
 
 ---
 
+## Trazabilidad HU → Implementación
+
+La columna **Estado** en la tabla anterior se actualizará a partir del Slice 1.0, cuando comience la implementación de HUs funcionales.
+
+### Estados posibles
+
+| Estado | Significado |
+|--------|-------------|
+| Planificado | HU definida y aceptada, pendiente de asignar a un slice |
+| En progreso | Slice asignado, implementación en curso |
+| Completado | Slice implementado, tests pasan, DoD cumplido |
+| Bloqueado | Dependencia externa no resuelta (hardware, modelo, decisión pendiente) |
+
+### Mapa de trazabilidad HU → Slice
+
+Los slices 0.3–0.9 son infraestructura base (Event Bus, Registry, Pipeline, Streams). No se mapean directamente a HUs de valor funcional, pero habilitan todas las HUs del MVP. El estado de cada slice se registra en `DESARROLLO.md`.
+
+A partir del Slice 1.0, cada slice se vincula explícitamente a una o más HUs:
+
+| Slice | HU(s) | Descripción | ARQUITECTURA § | Tests | Estado |
+|-------|-------|-------------|----------------|-------|--------|
+| 1.0 | HU-002 | ROI estático desde YAML + herramienta de calibración | §5, §7 | `tests/integration/test_roi.py` | Planificado |
+| 1.1 | HU-005 | Detección de vehículos con YOLO | §7 | `tests/integration/test_vehicle_yolo.py` | Planificado |
+| 1.2 | HU-006, HU-010, HU-011 | Tracking de mejor-frame y cache por track_id | §7 | `tests/integration/test_plate_tracker.py` | Planificado |
+| 1.3 | HU-007, HU-009, HU-012 | Detección de placas + OCR (Paddle/Tesseract) | §7 | `tests/integration/test_plate_ocr.py` | Planificado |
+| 1.4 | HU-020, HU-017 | Persistencia SQLite + pipeline completo | §4, §7 | `tests/integration/test_pipeline.py` | Planificado |
+
+> A medida que los slices avancen, esta tabla se actualizará reflejando el estado real de cada HU.
+
+---
+
 > *"Cada historia es un contrato entre el usuario y el sistema. Las historias MVP construyen la fundación; las post-MVP construyen el futuro."*

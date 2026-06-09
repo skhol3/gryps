@@ -158,19 +158,33 @@ $ python main.py --file tests/fixtures/sample_traffic.mp4
 
 No hay detección de vehículos, ni OCR, ni persistencia. Pero la infraestructura está viva y testeada.
 
-### Siguiente slice: Pipeline de Visión
+### Plantilla para Documentar un Slice
 
-Completado el Slice 0.5, el siguiente paso lógico es:
+Cada slice nuevo debe registrarse con esta plantilla (en este documento) al planificarse:
 
-| Orden | Tarea | Depende de |
-|-------|-------|------------|
-| 1.0 | `BasePreprocessorPlugin` + `ROIStatic` | Slice 0.5 |
-| 1.1 | `BaseDetectorPlugin` + `VehicleYOLO` | 1.0 |
-| 1.2 | `PlateTracker` (mejor-frame + cache) | 1.1 |
-| 1.3 | `PlateDetector` plugin | 1.2 |
-| 1.4 | `BaseOCRPlugin` + `TesseractBackend` | 1.2 |
-| 1.5 | `SQLiteOutput` plugin | 1.4 |
-| 1.6 | Pipeline completo: stream → ROI → vehicle → plate → OCR → SQLite | 1.0–1.5 |
+| Campo | Descripción |
+|-------|-------------|
+| **Slice** | ID del slice (ej. 1.0, 1.1) |
+| **HU** | ID de la(s) historia(s) de usuario que cubre |
+| **Depende de** | Slice(s) previo(s) requerido(s) |
+| **Archivos** | Rutas a crear o modificar |
+| **Eventos nuevos / contratos** | Nuevos tipos de evento en el bus o cambios en contratos existentes |
+| **Criterio de éxito** | Verificación funcional observable |
+| **Tests** | Tests unitarios y de integración requeridos |
+| **Documentación / trazabilidad** | Enlaces a ARQUITECTURA §, HU, docs actualizados |
+| **Duración estimada** | Días hábiles |
+
+### Siguientes Slices Recomendados (1.0 — 1.4)
+
+Completado el Slice 0.5, los siguientes slices implementan el pipeline MVP completo con trazabilidad a HU:
+
+| Slice | HU | Tarea | Depende de |
+|-------|------|-------|------------|
+| 1.0 | HU-002 | `BasePreprocessorPlugin` + `ROIStatic` | 0.5 |
+| 1.1 | HU-005 | `BaseDetectorPlugin` + `VehicleYOLO` | 1.0 |
+| 1.2 | HU-006, HU-010, HU-011 | `PlateTracker` (mejor-frame + cache) | 1.1 |
+| 1.3 | HU-007, HU-009, HU-012 | `PlateDetector` + OCR Backends | 1.2 |
+| 1.4 | HU-020, HU-017 | `SQLiteOutput` + pipeline wiring | 1.3 |
 
 ---
 
@@ -231,6 +245,20 @@ pre-commit install
 
 ## 7. Trazabilidad entre Documentos
 
+### Jerarquía de Autoridad
+
+| Documento | Propósito | Autoridad |
+|-----------|-----------|-----------|
+| `VISION.md` | Para qué / alcance MVP | Define el QUÉ y el POR QUÉ |
+| `ARQUITECTURA.md` | Cómo / constraints arquitectónicas | Define el CÓMO y los límites técnicos |
+| `HISTORIAS_USUARIO.md` | Qué valor / HU con criterios de aceptación | Define el PARA QUIÉN |
+| `DESARROLLO.md` | Orden técnico de implementación | Guía de implementación — no fuente de requisitos |
+| `CUADERNO_ESTUDIO.md` | Notas pedagógicas | Sin autoridad de planificación — solo enseñanza |
+
+> **Regla:** Un slice nuevo debe referenciar HU-ID(s), la sección de ARQUITECTURA que aplica, el orden en DESARROLLO, los tests que lo verifican, y su estado actual.
+
+### Mapa de Relaciones
+
 ```
 VISION.md                    ───→  ARQUITECTURA.md     ───→  HISTORIAS_USUARIO.md
   ┃                                  ┃                         ┃
@@ -256,7 +284,23 @@ VISION.md                    ───→  ARQUITECTURA.md     ───→  HIS
 
 ---
 
-## 8. Riesgos Inmediatos para el Desarrollo
+## 8. Definición de Completado (Definition of Done)
+
+Un slice se considera completado solo cuando cumple TODOS los siguientes criterios:
+
+| Criterio | Descripción | Verificación |
+|----------|-------------|--------------|
+| **Código implementado** | El código del slice está escrito y mergeado a `main` | `git log` muestra el commit |
+| **Tests pasan** | Tests unitarios y de integración del slice existen y pasan | `uv run pytest -v tests/` verde |
+| **Code review fresco** | El código fue revisado por al menos un par | PR aprobado sin cambios pendientes |
+| **Trazabilidad a HU** | El commit o PR referencia el HU-ID correspondiente | Mensaje de commit o PR incluye `HU-NNN` |
+| **Glosario de eventos actualizado** | Si el slice introduce nuevos eventos de bus, el glosario en `ARQUITECTURA.md` §4.3 se actualiza | `grep` del nuevo evento en §4.3 |
+| **Contexto persistente** | El contexto del slice y sus decisiones quedan registradas (Engram, PR description) | Entrada en memoria persistente o PR describe trade-offs |
+| **Documentación actualizada** | Si el slice cambia el comportamiento esperado, los docs relevantes se actualizan | Revisión de docs afectados |
+
+> **Importante:** `CUADERNO_ESTUDIO.md` contiene notas pedagógicas sobre el por qué y para qué de las decisiones técnicas. No es fuente de planificación ni autoridad de requisitos. Los criterios anteriores son los que determinan el completado de un slice.
+
+## 9. Riesgos Inmediatos para el Desarrollo
 
 1. **Sin tooling de calidad desde el inicio** → riesgo máximo. No escribir una línea de feature sin ruff + mypy + pytest configurados.
 2. **Dependencia de modelos de IA pesados** → YOLO11n y PaddleOCR requieren descargas de varios GB. Asegurar fixtures de test ligeros (frames estáticos, no videos completos).
