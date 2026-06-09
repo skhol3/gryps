@@ -1,0 +1,5 @@
+name: vehicle_yolo
+version: 0.1.0
+type: detector
+entrypoint: plugin.py
+class: VehicleYOLOPlugin
