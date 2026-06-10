@@ -7,10 +7,10 @@ Este documento existe para poder clonar el repo en otra PC y continuar sin depen
 | Área | Estado |
 |------|--------|
 | Rama base estable | `main` |
-| Último slice mergeado | Slice 1.0 / HU-002 — ROI estático sin GUI |
-| Rama actual de trabajo | `feat/slice-1.1-vehicle-yolo` |
-| Slice actual | Slice 1.1 / HU-005 — detector de vehículos |
-| Enfoque actual | Contrato de detector + boundary de `VehicleYOLO`, sin dependencia real de YOLO todavía |
+| Último slice mergeado | Slice 1.1 / HU-005 — detector de vehículos (PR #8) |
+| Rama actual de trabajo | `feat/slice-1.1-frame-store-wiring` |
+| Slice actual | Slice 1.1 / HU-005 — FrameStore wiring en stream sources |
+| Enfoque actual | `FileStream` inyecta `FrameStore` y almacena frames raw antes de publicar `NEW_FRAME` |
 
 ## Cómo levantar el proyecto en otra PC
 
@@ -65,57 +65,40 @@ Ya está mergeado en `main` mediante PR #4.
 
 ## Slice 1.1 / HU-005 — detector de vehículos
 
-La rama actual contiene los siguientes commits:
+### PR #8 (merged) — FrameStore + VehicleDetectorHandler
 
 ```text
 6b8caac chore(sdd): align generated SDD config
-1cfc96c sync engram memories
-8e2b2c5 docs: add development handoff guide
-3de397d feat(detectors): add vehicle YOLO plugin boundary
+...
 75da353 feat(detectors): add base detector contract
 ```
-
-### Qué se implementó
 
 - `BaseDetectorPlugin`.
 - `DetectionResult`.
 - Boundary de `VehicleYOLOPlugin` con adapter de inferencia inyectado.
 - Manifest `vehicle_yolo/plugin.yaml` discoverable por `PluginRegistry`.
-- `FrameStore` — contenedor que asocia `frame_ref` → raw frame, para que los frames nunca viajen por el EventBus.
-- `VehicleDetectorHandler` — wiring que suscribe a `NEW_FRAME`, resuelve el frame vía `FrameStore`, ejecuta el detector inyectado y publica un `VEHICLE_DETECTED` por cada detección.
-- Tests con fake model y fake detector, sin descargar pesos ni instalar Ultralytics.
+- `FrameStore` — contenedor que asocia `frame_ref` → raw frame.
+- `VehicleDetectorHandler` — wiring que suscribe a `NEW_FRAME`, resuelve el frame vía `FrameStore`, ejecuta el detector inyectado y publica `VEHICLE_DETECTED`.
 
-### Decisiones importantes
+### Rama actual — FrameStore wiring en stream sources
 
-- Todavía no se agregó `ultralytics`, OpenCV, pesos de modelo ni descargas de red.
-- `VehicleYOLOPlugin` recibe un adapter/modelo inyectado para mantener testabilidad.
-- `VehicleDetectorHandler` recibe `EventBus`, `BaseDetectorPlugin` y `FrameStore` inyectados.
-- `FrameStore` es un dict simple; en el futuro los stream sources escribirán frames al store.
-- Raw frames no viajan por `EventBus`; `FrameStore` actúa como puente entre stream source y detector.
-- Se publica UN `VEHICLE_DETECTED` por detección individual, no un evento agregado por frame.
-- `bbox` está definido como coordenadas de píxel `xyxy`:
-
-  ```text
-  (x_min, y_min, x_max, y_max)
-  ```
-
-  en el frame procesado, después de preprocessors como ROI.
-
-- Los bounds son half-open: `x_min`/`y_min` inclusivos, `x_max`/`y_max` exclusivos.
-- `track_id` es opcional y no representa tracking persistente; HU-006 debe encargarse de tracking real.
-- Clases vehiculares actuales: `car`, `motorcycle`, `bus`, `truck`.
-- `person`/peatones se ignoran porque HU-005 no activa detector de personas.
+- `FileStream` ahora recibe `FrameStore` por DI (parámetro `frame_store`).
+- `read_next()` almacena el frame raw en `FrameStore` con key `mem://<stream_id>/<frame_id>`.
+- `publish_next()` también almacena antes de publicar el evento.
+- Se eliminó el `_frame_cache` interno — `FrameStore` es el único repositorio.
+- `close()` ya no limpia el store (es compartido entre streams).
+- Tests en `TestFileStreamFrameStoreIntegration` cubren store/publish/flujo multi-stream.
 
 ## Próximo paso recomendado
 
-El `VehicleDetectorHandler` ya consume `NEW_FRAME` y publica `VEHICLE_DETECTED`.
-El siguiente paso es integrar `FrameStore` en los stream sources (e.g. `FileStream`) para que el pipeline funcione end-to-end.
+El `FrameStore` ya está integrado en `FileStream`. La frontera de pipeline queda lista para wiring end-to-end:
+`FileStream` → almacena en `FrameStore` → publica `NEW_FRAME` → `VehicleDetectorHandler` puede resolver frame y detectar cuando se conecte en composición.
 
-Después de mergear, opciones razonables:
+Próximas opciones razonables:
 
-1. `feat/slice-1.1-frame-store-wiring` — integrar `FrameStore` en `FileStream` para pipeline completo.
-2. `feat/slice-1.1-ultralytics-adapter` — agregar adapter real opcional de Ultralytics, sin pesos en Git.
-3. `feat/slice-1.2-plate-detector` — comenzar con detector de placas (HU-004).
+1. `feat/slice-1.1-ultralytics-adapter` — agregar adapter real opcional de Ultralytics, sin pesos en Git.
+2. `feat/slice-1.2-plate-detector` — comenzar con detector de placas (HU-004).
+3. `feat/slice-1.1-stream-registry` — integration test end-to-end con `PipelineOrchestrator`.
 
 ## Comandos útiles
 
@@ -134,4 +117,4 @@ git diff --check main...HEAD
 - No hay adapter real de Ultralytics todavía.
 - No hay pesos YOLO en el repo.
 - No hay tracking persistente todavía.
-- `VEHICLE_DETECTED` se publica pero los stream sources aún no integran `FrameStore`.
+- `VEHICLE_DETECTED` conserva `stream_id`/`frame_id` en el evento; el payload contiene solo la detección serializable.

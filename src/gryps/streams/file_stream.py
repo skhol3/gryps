@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 
+from gryps.core import FrameStore
 from gryps.streams.base import BaseStreamSource, FrameMetadata, FrameReader
 
 
@@ -12,10 +13,10 @@ class FileStream(BaseStreamSource):
     :class:`FrameReader` adapter, making this class testable
     without a real codec library.
 
-    Frame data is stored in an internal cache keyed by
-    ``mem://<stream_id>/<frame_id>`` URIs.  Only *references*
-    (strings) travel through the EventBus — raw pixel arrays
-    never leave this object.
+    Raw frame data is stored in an injected :class:`FrameStore`
+    keyed by ``mem://<stream_id>/<frame_id>`` URIs.  Only
+    *references* (strings) travel through the EventBus — raw
+    pixel arrays never leave this object or the store.
     """
 
     def __init__(
@@ -23,12 +24,13 @@ class FileStream(BaseStreamSource):
         stream_id: str,
         source_path: str,
         reader: FrameReader,
+        frame_store: FrameStore,
     ) -> None:
         self._stream_id = stream_id
         self._source_path = source_path
         self._reader = reader
         self._frame_count = 0
-        self._frame_cache: dict[str, object] = {}
+        self._frame_store = frame_store
 
         reader.open(source_path)
 
@@ -60,7 +62,7 @@ class FileStream(BaseStreamSource):
         self._frame_count += 1
 
         frame_ref = f"mem://{self._stream_id}/{frame_id}"
-        self._frame_cache[frame_ref] = raw
+        self._frame_store.store(frame_ref, raw)
 
         return FrameMetadata(
             frame_id=frame_id,
@@ -74,4 +76,3 @@ class FileStream(BaseStreamSource):
 
     def close(self) -> None:
         self._reader.close()
-        self._frame_cache.clear()
