@@ -15,3 +15,6 @@ coverage.xml
 
 # Virtual environments
 .venv
+
+# SDD tooling artifacts
+.atl/
