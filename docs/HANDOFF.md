@@ -65,11 +65,14 @@ Ya está mergeado en `main` mediante PR #4.
 
 ## Slice 1.1 / HU-005 — detector de vehículos
 
-La rama actual contiene dos commits listos para PR:
+La rama actual contiene los siguientes commits:
 
 ```text
-75da353 feat(detectors): add base detector contract
+6b8caac chore(sdd): align generated SDD config
+1cfc96c sync engram memories
+8e2b2c5 docs: add development handoff guide
 3de397d feat(detectors): add vehicle YOLO plugin boundary
+75da353 feat(detectors): add base detector contract
 ```
 
 ### Qué se implementó
@@ -78,14 +81,18 @@ La rama actual contiene dos commits listos para PR:
 - `DetectionResult`.
 - Boundary de `VehicleYOLOPlugin` con adapter de inferencia inyectado.
 - Manifest `vehicle_yolo/plugin.yaml` discoverable por `PluginRegistry`.
-- Tests con fake model, sin descargar pesos ni instalar Ultralytics.
+- `FrameStore` — contenedor que asocia `frame_ref` → raw frame, para que los frames nunca viajen por el EventBus.
+- `VehicleDetectorHandler` — wiring que suscribe a `NEW_FRAME`, resuelve el frame vía `FrameStore`, ejecuta el detector inyectado y publica un `VEHICLE_DETECTED` por cada detección.
+- Tests con fake model y fake detector, sin descargar pesos ni instalar Ultralytics.
 
 ### Decisiones importantes
 
 - Todavía no se agregó `ultralytics`, OpenCV, pesos de modelo ni descargas de red.
 - `VehicleYOLOPlugin` recibe un adapter/modelo inyectado para mantener testabilidad.
-- No hay wiring de pipeline ni publicación de eventos todavía.
-- Raw frames no viajan por `EventBus`; los detectores devuelven resultados serializables y otro componente decidirá cómo publicar eventos.
+- `VehicleDetectorHandler` recibe `EventBus`, `BaseDetectorPlugin` y `FrameStore` inyectados.
+- `FrameStore` es un dict simple; en el futuro los stream sources escribirán frames al store.
+- Raw frames no viajan por `EventBus`; `FrameStore` actúa como puente entre stream source y detector.
+- Se publica UN `VEHICLE_DETECTED` por detección individual, no un evento agregado por frame.
 - `bbox` está definido como coordenadas de píxel `xyxy`:
 
   ```text
@@ -101,15 +108,14 @@ La rama actual contiene dos commits listos para PR:
 
 ## Próximo paso recomendado
 
-Terminar el PR del Slice 1.1 actual y mergearlo antes de seguir.
+El `VehicleDetectorHandler` ya consume `NEW_FRAME` y publica `VEHICLE_DETECTED`.
+El siguiente paso es integrar `FrameStore` en los stream sources (e.g. `FileStream`) para que el pipeline funcione end-to-end.
 
-Después de mergear, crear una rama nueva desde `main` para el siguiente work unit. Opciones razonables:
+Después de mergear, opciones razonables:
 
-1. `feat/slice-1.1-vehicle-events` — consumir `NEW_FRAME` y publicar `VEHICLE_DETECTED` con fake resolver/model.
+1. `feat/slice-1.1-frame-store-wiring` — integrar `FrameStore` en `FileStream` para pipeline completo.
 2. `feat/slice-1.1-ultralytics-adapter` — agregar adapter real opcional de Ultralytics, sin pesos en Git.
-3. `docs/slice-1.1-detector-flow` — documentar trazabilidad de HU-005 si se decide cerrar primero la base.
-
-Recomendación: avanzar primero con eventos/wiring fake antes de meter Ultralytics real. La dependencia pesada debe llegar cuando la frontera ya esté probada.
+3. `feat/slice-1.2-plate-detector` — comenzar con detector de placas (HU-004).
 
 ## Comandos útiles
 
@@ -128,4 +134,4 @@ git diff --check main...HEAD
 - No hay adapter real de Ultralytics todavía.
 - No hay pesos YOLO en el repo.
 - No hay tracking persistente todavía.
-- No hay publicación real de `VEHICLE_DETECTED` todavía.
+- `VEHICLE_DETECTED` se publica pero los stream sources aún no integran `FrameStore`.
