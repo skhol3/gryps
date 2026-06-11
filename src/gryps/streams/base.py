@@ -15,8 +15,8 @@ class FrameMetadata:
 
     The actual pixel data never travels through the EventBus — only
     this metadata object does.  ``frame_ref`` is an opaque reference
-    that the owning stream source can use to look up the raw frame
-    from its internal cache.
+    that consumers can use to look up the raw frame from a shared
+    ``FrameStore``.
 
     Fields
     ------

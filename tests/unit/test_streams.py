@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from gryps.core import Event, LocalEventBus
+from gryps.core import Event, FrameStore, LocalEventBus
 from gryps.streams import BaseStreamSource, FileStream, FrameMetadata, FrameReader
 
 # ---------------------------------------------------------------------------
@@ -132,7 +132,9 @@ class TestBaseStreamSource:
 
     def test_publish_next_uses_correct_event(self) -> None:
         reader = SyntheticFrameReader(num_frames=3)
-        source = FileStream(stream_id="test", source_path="dummy", reader=reader)
+        source = FileStream(
+            stream_id="test", source_path="dummy", reader=reader, frame_store=FrameStore(),
+        )
         bus = LocalEventBus()
         captured = collect_events(bus, "NEW_FRAME")
 
@@ -149,7 +151,9 @@ class TestBaseStreamSource:
 
     def test_publish_next_returns_none_when_exhausted(self) -> None:
         reader = SyntheticFrameReader(num_frames=2)
-        source = FileStream(stream_id="ex", source_path="x", reader=reader)
+        source = FileStream(
+            stream_id="ex", source_path="x", reader=reader, frame_store=FrameStore(),
+        )
         bus = LocalEventBus()
 
         assert source.publish_next(bus) is not None
@@ -164,14 +168,16 @@ class TestBaseStreamSource:
 class TestFileStream:
     def test_init_opens_reader(self) -> None:
         reader = SyntheticFrameReader(num_frames=3)
-        source = FileStream(stream_id="f1", source_path="dummy", reader=reader)
+        source = FileStream(
+            stream_id="f1", source_path="dummy", reader=reader, frame_store=FrameStore(),
+        )
         assert source.stream_id == "f1"
         assert source.source_path == "dummy"
         assert source.frame_count == 0
 
     def test_read_next_returns_metadata(self) -> None:
         reader = SyntheticFrameReader(num_frames=1, resolution=(320, 240))
-        source = FileStream(stream_id="f", source_path="x", reader=reader)
+        source = FileStream(stream_id="f", source_path="x", reader=reader, frame_store=FrameStore())
         meta = source.read_next()
 
         assert meta is not None
@@ -184,7 +190,7 @@ class TestFileStream:
 
     def test_read_next_monotonic_frame_ids(self) -> None:
         reader = SyntheticFrameReader(num_frames=3)
-        source = FileStream(stream_id="f", source_path="x", reader=reader)
+        source = FileStream(stream_id="f", source_path="x", reader=reader, frame_store=FrameStore())
 
         ids = []
         while (meta := source.read_next()) is not None:
@@ -193,12 +199,12 @@ class TestFileStream:
 
     def test_read_next_returns_none_at_end(self) -> None:
         reader = SyntheticFrameReader(num_frames=0)
-        source = FileStream(stream_id="f", source_path="x", reader=reader)
+        source = FileStream(stream_id="f", source_path="x", reader=reader, frame_store=FrameStore())
         assert source.read_next() is None
 
     def test_read_next_returns_none_after_exhaustion(self) -> None:
         reader = SyntheticFrameReader(num_frames=1)
-        source = FileStream(stream_id="f", source_path="x", reader=reader)
+        source = FileStream(stream_id="f", source_path="x", reader=reader, frame_store=FrameStore())
         assert source.read_next() is not None
         assert source.read_next() is None
         assert source.read_next() is None  # still None
@@ -206,11 +212,14 @@ class TestFileStream:
     def test_missing_file_raises_on_init(self) -> None:
         reader = FailingFrameReader()
         with pytest.raises(FileNotFoundError, match="missing_video"):
-            FileStream(stream_id="f", source_path="missing_video.mp4", reader=reader)
+            FileStream(
+                stream_id="f", source_path="missing_video.mp4",
+                reader=reader, frame_store=FrameStore(),
+            )
 
     def test_close_releases_resources(self) -> None:
         reader = SyntheticFrameReader(num_frames=3)
-        source = FileStream(stream_id="f", source_path="x", reader=reader)
+        source = FileStream(stream_id="f", source_path="x", reader=reader, frame_store=FrameStore())
         source.read_next()
         assert source.frame_count == 1
         source.close()
@@ -221,7 +230,10 @@ class TestFileStream:
 
     def test_publishes_new_frame_events(self) -> None:
         reader = SyntheticFrameReader(num_frames=3, resolution=(640, 480))
-        source = FileStream(stream_id="file_01", source_path="test.mp4", reader=reader)
+        source = FileStream(
+            stream_id="file_01", source_path="test.mp4",
+            reader=reader, frame_store=FrameStore(),
+        )
         bus = LocalEventBus()
         captured: list[Event] = []
         bus.subscribe("NEW_FRAME", captured.append)
@@ -241,7 +253,9 @@ class TestFileStream:
     def test_raw_frame_not_in_event_payload(self) -> None:
         """Verify the EventBus never receives pixel data."""
         reader = SyntheticFrameReader(num_frames=2)
-        source = FileStream(stream_id="safe", source_path="x", reader=reader)
+        source = FileStream(
+            stream_id="safe", source_path="x", reader=reader, frame_store=FrameStore(),
+        )
         bus = LocalEventBus()
         captured: list[Event] = []
         bus.subscribe("NEW_FRAME", captured.append)
@@ -259,7 +273,9 @@ class TestFileStream:
 
     def test_end_of_stream_does_not_publish(self) -> None:
         reader = SyntheticFrameReader(num_frames=0)
-        source = FileStream(stream_id="empty", source_path="x", reader=reader)
+        source = FileStream(
+            stream_id="empty", source_path="x", reader=reader, frame_store=FrameStore(),
+        )
         bus = LocalEventBus()
         captured: list[Event] = []
         bus.subscribe("NEW_FRAME", captured.append)
@@ -270,7 +286,7 @@ class TestFileStream:
 
     def test_publish_after_exhaustion(self) -> None:
         reader = SyntheticFrameReader(num_frames=1)
-        source = FileStream(stream_id="f", source_path="x", reader=reader)
+        source = FileStream(stream_id="f", source_path="x", reader=reader, frame_store=FrameStore())
         bus = LocalEventBus()
         captured: list[Event] = []
         bus.subscribe("NEW_FRAME", captured.append)
@@ -283,9 +299,110 @@ class TestFileStream:
 
     def test_frame_count_tracks_reads(self) -> None:
         reader = SyntheticFrameReader(num_frames=5)
-        source = FileStream(stream_id="f", source_path="x", reader=reader)
+        source = FileStream(stream_id="f", source_path="x", reader=reader, frame_store=FrameStore())
         assert source.frame_count == 0
         source.read_next()
         assert source.frame_count == 1
         source.read_next()
         assert source.frame_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Test FileStream + FrameStore integration
+# ---------------------------------------------------------------------------
+
+class TestFileStreamFrameStoreIntegration:
+    """FrameStore wiring: frames must be stored under frame_ref before
+    publishing NEW_FRAME, and retrievable by consumers."""
+
+    def test_stores_raw_frame_in_store_on_read(self) -> None:
+        store = FrameStore()
+        reader = SyntheticFrameReader(num_frames=1)
+        source = FileStream(
+            stream_id="f", source_path="x", reader=reader, frame_store=store,
+        )
+        meta = source.read_next()
+        assert meta is not None
+        stored = store.get(meta.frame_ref)
+        assert stored is not None
+        assert stored == {"dummy": True}
+
+    def test_stores_multiple_frames_with_different_refs(self) -> None:
+        store = FrameStore()
+        reader = SyntheticFrameReader(num_frames=3)
+        source = FileStream(
+            stream_id="f", source_path="x", reader=reader, frame_store=store,
+        )
+        refs: list[str] = []
+        while (meta := source.read_next()) is not None:
+            refs.append(meta.frame_ref)
+        assert len(store) == 3
+        for ref in refs:
+            assert store.get(ref) is not None
+
+    def test_does_not_store_when_stream_exhausted(self) -> None:
+        store = FrameStore()
+        reader = SyntheticFrameReader(num_frames=0)
+        source = FileStream(
+            stream_id="empty", source_path="x", reader=reader, frame_store=store,
+        )
+        assert source.read_next() is None
+        assert len(store) == 0
+
+    def test_publish_next_stores_frame_in_store(self) -> None:
+        store = FrameStore()
+        reader = SyntheticFrameReader(num_frames=2)
+        source = FileStream(
+            stream_id="cam", source_path="x", reader=reader, frame_store=store,
+        )
+        bus = LocalEventBus()
+        captured = collect_events(bus, FrameMetadata.NEW_FRAME)
+        for _ in range(2):
+            source.publish_next(bus)
+        assert len(captured) == 2
+        for event in captured:
+            ref: str = event.payload["frame_ref"]
+            stored = store.get(ref)
+            assert stored is not None
+            assert stored == {"dummy": True}
+
+    def test_ref_in_frame_store_matches_payload_ref(self) -> None:
+        store = FrameStore()
+        reader = SyntheticFrameReader(num_frames=1)
+        source = FileStream(
+            stream_id="match", source_path="x", reader=reader, frame_store=store,
+        )
+        meta = source.read_next()
+        assert meta is not None
+        stored_frame = store.get(meta.frame_ref)
+        assert stored_frame is not None
+        assert stored_frame == {"dummy": True}
+
+    def test_shared_store_isolates_frames_by_stream_id(self) -> None:
+        """Two streams sharing the same FrameStore must not collide."""
+        store = FrameStore()
+        reader_a = SyntheticFrameReader(num_frames=2)
+        reader_b = SyntheticFrameReader(num_frames=3)
+
+        source_a = FileStream(
+            stream_id="cam_a", source_path="x", reader=reader_a, frame_store=store,
+        )
+        source_b = FileStream(
+            stream_id="cam_b", source_path="x", reader=reader_b, frame_store=store,
+        )
+
+        refs_a: list[str] = []
+        while (m := source_a.read_next()) is not None:
+            refs_a.append(m.frame_ref)
+
+        refs_b: list[str] = []
+        while (m := source_b.read_next()) is not None:
+            refs_b.append(m.frame_ref)
+
+        assert len(store) == 5
+        for ref in refs_a:
+            assert "cam_a" in ref
+            assert store.get(ref) is not None
+        for ref in refs_b:
+            assert "cam_b" in ref
+            assert store.get(ref) is not None

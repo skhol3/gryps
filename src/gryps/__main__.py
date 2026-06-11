@@ -19,7 +19,7 @@ import argparse
 import sys
 from collections.abc import Callable
 
-from gryps.core import LocalEventBus
+from gryps.core import FrameStore, LocalEventBus
 from gryps.plugins.outputs.frame_logger.output import FrameLogger
 from gryps.streams import FileStream
 
@@ -68,7 +68,12 @@ def _open_file(path: str) -> FileStream | None:
         from gryps.streams.readers.opencv_reader import OpenCVFrameReader
 
         reader = OpenCVFrameReader()
-        return FileStream(stream_id="file_01", source_path=path, reader=reader)
+        return FileStream(
+            stream_id="file_01",
+            source_path=path,
+            reader=reader,
+            frame_store=FrameStore(),
+        )
     except ImportError:
         print(
             "OpenCV is not available. Install opencv-python to process video files.",
