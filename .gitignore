@@ -18,3 +18,7 @@ coverage.xml
 
 # SDD tooling artifacts
 .atl/
+
+# Local experiments
+/tmp/
+*.pt
