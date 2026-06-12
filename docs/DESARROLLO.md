@@ -1,34 +1,43 @@
 # Guía de Desarrollo — Gryps
 
-> **Versión:** 0.1  
-> **Fecha:** 2026-06-08  
+> **Versión:** 0.2
+> **Fecha:** 2026-06-12
 > **Audiencia:** Desarrolladores del proyecto
 
 ---
 
 ## 1. Estado Actual del Desarrollo
 
-Gryps está en **fase 0: inicio del proyecto**. No hay código de componentes funcionales implementados.
+Gryps está en **fase de implementación de MVP — Slices 1.0 a 1.2 completados**.
 
 ### Lo que existe
 
 | Artefacto | Estado | Notas |
 |-----------|--------|-------|
-| `main.py` | Esqueleto | Solo `print("Hello from gryps!")` |
-| `pyproject.toml` | Mínimo | Sin dependencias, Python >= 3.12, uv-managed |
-| `docs/VISION.md` | Completo (aspiracional) | Visión de producto, alcance MVP vs futuro |
-| `docs/ARQUITECTURA.md` | Completo (aspiracional) | Arquitectura detallada, ADRs, roadmap |
-| `docs/HISTORIAS_USUARIO.md` | Completo (aspiracional) | 28 HU con criterios de aceptación |
-| Validaciones de concepto | Externo a Gryps | Notebooks/scripts independientes probaron YOLO11n, l.pt, PaddleOCR, Tesseract en i5 2014 |
+| `src/gryps/core/` | Implementado | EventBus, Event dataclasses, PluginRegistry, PipelineOrchestrator, base exceptions |
+| `src/gryps/streams/` | Implementado | `BaseStreamSource`, `FileStream` con `FrameStore` wiring |
+| `src/gryps/preprocessors/` | Parcial | `BasePreprocessorPlugin`, `ROIStatic` con carga YAML + calibración headless |
+| `src/gryps/plugins/detectors/` | Parcial | `BaseDetectorPlugin`, `VehicleYOLOPlugin` boundary, `UltralyticsAdapter` opcional |
+| `src/gryps/tracking/` | Implementado | `PlateTracker` con ciclo de vida, mejor frame y estado de cache OCR |
+| `src/gryps/tools/` | Implementado | `gryps.tools.calibrate` — generación de YAML de ROI |
+| `config/` | Parcial | `config/roi.yaml` esperado en runtime (requiere calibración) |
+| `tests/` | Implementado | Tests unitarios con pytest; tests de integración pendientes |
+| `pyproject.toml` | Configurado | Ruff, mypy, pytest, extras opcionales (ultralytics) |
+| `.github/workflows/` | Configurado | CI con ruff + mypy + pytest |
+| `docs/VISION.md` | Completo | Visión de producto, alcance MVP vs futuro |
+| `docs/ARQUITECTURA.md` | Completo | Arquitectura, ADRs, roadmap |
+| `docs/HISTORIAS_USUARIO.md` | Completo | 28 HU con criterios de aceptación y trazabilidad |
+| Validaciones de concepto | Externo a Gryps | Notebooks/scripts probaron YOLO11n, l.pt, PaddleOCR, Tesseract en i5 2014 |
 
-### Lo que NO existe (y debe construirse)
+### Lo que NO existe (debe construirse)
 
-- Código fuente del framework (`core/`, `streams/`, `plugins/`, `preprocessors/`, `tracking/`)
-- Tests de cualquier nivel
-- Tooling de calidad (linter, type checker, formatter, test runner)
-- CI/CD pipeline
-- Configuración (`config/`)
-- `README.md` funcional
+- Detector de placas (HU-007)
+- Backends de OCR (HU-009, HU-012)
+- Persistencia SQLite (HU-020)
+- Integración completa de EventBus local con `PLATE_READ` y pipeline persistente (HU-017 — parcial)
+- Perfiles de hardware (HU-003)
+- Selección de tipo de cámara (HU-004)
+- Streams RTSP/USB reales
 
 ---
 
@@ -176,7 +185,7 @@ Cada slice nuevo debe registrarse con esta plantilla (en este documento) al plan
 
 ### Siguientes Slices Recomendados (1.0 — 1.4)
 
-Completado el Slice 0.5, los siguientes slices implementan el pipeline MVP completo con trazabilidad a HU:
+Completados los Slices 0.5 (infraestructura), 1.0 (ROI), 1.1 (detección de vehículos) y 1.2 (tracking). Los siguientes slices completan el pipeline MVP con trazabilidad a HU:
 
 | Slice | HU | Tarea | Depende de |
 |-------|------|-------|------------|
@@ -227,6 +236,50 @@ Completado el Slice 0.5, los siguientes slices implementan el pipeline MVP compl
 - Cableado automático del preprocessor en perfiles o configuración de streams.
 - ROI poligonal, PTZ, auto-motion o dewarping.
 - Tests de GUI real con OpenCV; la GUI queda detrás de una frontera diferida para mantener CI headless.
+
+### Slice 1.1: Detección de vehículos
+
+| Campo | Detalle |
+|-------|---------|
+| **Slice** | 1.1 |
+| **HU** | HU-005 |
+| **Depende de** | Slice 1.0 |
+| **Archivos** | `src/gryps/plugins/detectors/base.py`, `src/gryps/plugins/detectors/vehicle_yolo/`, `src/gryps/core/frame_store.py`, `src/gryps/streams/file_stream.py`, `tests/` |
+| **Eventos nuevos / contratos** | `VEHICLE_DETECTED` con `stream_id`/`frame_id` y payload serializable. `FrameStore` como repositorio central de frames raw. |
+| **Criterio de éxito** | `FileStream` publica `NEW_FRAME`, `VehicleDetectorHandler` suscribe, resuelve frame vía `FrameStore`, ejecuta detector inyectado y publica `VEHICLE_DETECTED`. Detector opcional con `UltralyticsAdapter`. |
+| **Tests** | Unitarios de `BaseDetectorPlugin`, `DetectionResult`, `VehicleYOLOPlugin` con adapter fake. Integración de `FrameStore` + `FileStream`. Tests de `UltralyticsAdapter` con fakes de ultralytics. |
+| **Documentación / trazabilidad** | HU-005 en `docs/HISTORIAS_USUARIO.md`; PRs #8, #10, #12 mergeados. |
+| **Duración estimada** | 2-3 días hábiles |
+
+#### Eventos del Slice 1.1
+
+| Evento | Contenido | Publicado por |
+|--------|-----------|--------------|
+| `NEW_FRAME` | `stream_id`, `frame_id`, `timestamp` | `FileStream` |
+| `VEHICLE_DETECTED` | `stream_id`, `frame_id`, `detections[]` (label, confidence, bbox) | `VehicleDetectorHandler` |
+
+#### Decisiones importantes del Slice 1.1
+
+- `FrameStore` es el repositorio único de frames raw; `FileStream` ya no cachea frames internamente.
+- El adapter de inferencia (`InferenceAdapter`) es inyectado — `VehicleYOLOPlugin` no conoce Ultralytics.
+- `UltralyticsAdapter` es dependencia opcional (`uv sync --extra ultralytics`).
+- Los frames NO viajan por el EventBus — solo referencias (`stream_id`/`frame_id`).
+
+#### Fuera de alcance del Slice 1.1
+
+- Tracking persistente de vehículos (HU-006, Slice 1.2).
+- Detección de placas ni OCR (Slice 1.3).
+- Streams RTSP o USB reales.
+
+---
+
+## Próximo slice recomendado
+
+**Slice 1.3 — Detección de placas + OCR (HU-007, HU-009, HU-012)**
+
+Implementar el detector de placas y los contratos de OCR sobre el estado de tracking ya disponible, manteniendo modelos reales como dependencias opcionales cuando corresponda.
+
+Ver roadmap en tabla de Siguientes Slices (sección anterior) y detalle en HU correspondientes.
 
 ---
 
