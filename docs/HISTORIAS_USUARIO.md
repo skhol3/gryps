@@ -418,30 +418,30 @@
 | ID | Historia | Épica | Prioridad | Fase | Componente Arquitectónico | Estado |
 |----|----------|-------|-----------|------|--------------------------|--------|
 | HU-001 | Fuente de video | Ingesta | Must | MVP | `streams/base.py`, `streams/file_stream`, `usb_stream`, `rtsp_stream` | Planificado |
-| HU-002 | ROI sin GUI | Ingesta | Must | MVP | `preprocessors/roi/`, `tools/calibrate.py` | En progreso |
+| HU-002 | ROI sin GUI | Ingesta | Must | MVP | `preprocessors/roi/`, `tools/calibrate.py` | Completado |
 | HU-003 | Perfil de hardware | Ingesta | Must | MVP | `config/profiles.py`, `core/registry.py` | Planificado |
 | HU-004 | Tipo de cámara | Ingesta | Must | MVP (arquitectura) | `core/pipeline_orchestrator.py`, `streams/base.py` | Planificado |
-| HU-005 | Detectar vehículos | Detección | Must | MVP | `plugins/detectors/vehicle_yolo/` | Planificado |
-| HU-006 | Tracking | Detección | Must | MVP | `tracking/plate_tracker.py`, `tracking/track_state.py` | Planificado |
+| HU-005 | Detectar vehículos | Detección | Must | MVP | `plugins/detectors/vehicle_yolo/` | Completado |
+| HU-006 | Tracking | Detección | Must | MVP | `tracking/plate_tracker.py` | Completado |
 | HU-007 | Detectar placas | Detección | Must | MVP | `plugins/detectors/plate_yolo/` | Planificado |
 | HU-008 | Compensar PTZ | Detección | Should | Fase 2 | `preprocessors/roi/ptz_compensated.py`, `streams/ptz_stream.py` | Planificado |
 | HU-009 | Leer placa OCR | OCR | Must | MVP | `plugins/ocr_backends/` | Planificado |
-| HU-010 | Mejor frame | OCR | Must | MVP | `tracking/plate_tracker.py` | Planificado |
-| HU-011 | Cache OCR | OCR | Must | MVP | `tracking/plate_tracker.py` | Planificado |
+| HU-010 | Mejor frame | OCR | Must | MVP | `tracking/plate_tracker.py` | Completado |
+| HU-011 | Cache OCR | OCR | Must | MVP | `tracking/plate_tracker.py` | Completado |
 | HU-012 | Backend OCR | OCR | Must | MVP | `plugins/ocr_backends/` | Planificado |
 | HU-013 | Ángulos extremos móvil | OCR | Could | Fase 3 | `plugins/ocr_backends/` (modelos entrenados) | Planificado |
 | HU-014 | Dewarping 360° | Preprocesamiento | Should | Fase 2 | `preprocessors/dewarp/` | Planificado |
 | HU-015 | Detección térmica | Preprocesamiento | Should | Fase 3 | `streams/thermal_stream.py`, `plugins/detectors/` | Planificado |
 | HU-016 | Trigger externo | Preprocesamiento | Could | Fase 3 | `preprocessors/trigger_sync/`, `streams/triggered_stream.py` | Planificado |
-| HU-017 | Event Bus local | Eventos | Must | MVP | `core/bus.py` | Planificado |
+| HU-017 | Event Bus local | Eventos | Must | MVP | `core/bus.py` | Parcial |
 | HU-018 | Alerta desconocido | Alertas | Should | Fase 2 | `plugins/outputs/` (whitelist logic) | Planificado |
 | HU-019 | Telegram | Alertas | Could | Fase 2 | `plugins/outputs/telegram_bot/` | Planificado |
 | HU-020 | SQLite | Persistencia | Must | MVP | `plugins/outputs/sqlite_local/` | Planificado |
 | HU-021 | Reporte CSV | Persistencia | Should | Fase 2 | `plugins/outputs/sqlite_local/` (export) | Planificado |
 | HU-022 | Búsqueda video | Persistencia | Could | Fase 3 | `plugins/outputs/` (video index) | Planificado |
-| HU-023 | Plugin detector | Escalabilidad | Should | MVP (arquitectura) | `core/registry.py`, `plugins/base.py` | Planificado |
-| HU-024 | Preprocessor cámara | Escalabilidad | Should | MVP (arquitectura) | `core/registry.py`, `preprocessors/base.py` | Planificado |
-| HU-025 | Bus swappable | Escalabilidad | Should | MVP (arquitectura) | `core/bus.py` (MQTT/Redis impls) | Planificado |
+| HU-023 | Plugin detector | Escalabilidad | Should | MVP (arquitectura) | `core/registry.py`, `plugins/base.py` | Parcial |
+| HU-024 | Preprocessor cámara | Escalabilidad | Should | MVP (arquitectura) | `core/registry.py`, `preprocessors/base.py` | Parcial |
+| HU-025 | Bus swappable | Escalabilidad | Should | MVP (arquitectura) | `core/bus.py` (MQTT/Redis impls) | Parcial |
 | HU-026 | Panel web | Escalabilidad | Could | Fase 2 | `web/` (Post-MVP, no definido en estructura) | Planificado |
 | HU-027 | Auto-borrado | Privacidad | Should | Fase 2 | `plugins/outputs/` (retention manager) | Planificado |
 | HU-028 | No rostros | Privacidad | Must | MVP | `plugins/detectors/` (crop policy), `core/` (hash integrity) | Planificado |
@@ -450,7 +450,7 @@
 
 ## Trazabilidad HU → Implementación
 
-La columna **Estado** en la tabla anterior se actualizará a partir del Slice 1.0, cuando comience la implementación de HUs funcionales.
+La columna **Estado** en las tablas siguientes refleja el estado real de cada HU a partir del Slice 1.0.
 
 ### Estados posibles
 
@@ -458,6 +458,7 @@ La columna **Estado** en la tabla anterior se actualizará a partir del Slice 1.
 |--------|-------------|
 | Planificado | HU definida y aceptada, pendiente de asignar a un slice |
 | En progreso | Slice asignado, implementación en curso |
+| Parcial | Arquitectura/componente habilitante existe, pero la funcionalidad completa no está implementada |
 | Completado | Slice implementado, tests pasan, DoD cumplido |
 | Bloqueado | Dependencia externa no resuelta (hardware, modelo, decisión pendiente) |
 
@@ -469,11 +470,11 @@ A partir del Slice 1.0, cada slice se vincula explícitamente a una o más HUs:
 
 | Slice | HU(s) | Descripción | ARQUITECTURA § | Tests | Estado |
 |-------|-------|-------------|----------------|-------|--------|
-| 1.0 | HU-002 | ROI estático desde YAML + herramienta de calibración | §5, §7 | `tests/unit/test_roi_preprocessor.py`, `tests/unit/test_calibrate_tool.py` | En progreso |
-| 1.1 | HU-005 | Detección de vehículos con YOLO | §7 | `tests/integration/test_vehicle_yolo.py` | Planificado |
-| 1.2 | HU-006, HU-010, HU-011 | Tracking de mejor-frame y cache por track_id | §7 | `tests/integration/test_plate_tracker.py` | Planificado |
+| 1.0 | HU-002 | ROI estático desde YAML + herramienta de calibración | §5, §7 | `tests/unit/test_roi_preprocessor.py`, `tests/unit/test_calibrate_tool.py` | Completado |
+| 1.1 | HU-005 | Detección de vehículos con YOLO | §7 | `tests/unit/test_vehicle_yolo.py`, `tests/unit/test_detector_base.py`, `tests/unit/test_frame_store.py`, `tests/unit/test_vehicle_detector_handler.py` | Completado |
+| 1.2 | HU-006, HU-010, HU-011 | Tracking de mejor-frame y cache por track_id | §7 | `tests/unit/test_plate_tracker.py` | Completado |
 | 1.3 | HU-007, HU-009, HU-012 | Detección de placas + OCR (Paddle/Tesseract) | §7 | `tests/integration/test_plate_ocr.py` | Planificado |
-| 1.4 | HU-020, HU-017 | Persistencia SQLite + pipeline completo | §4, §7 | `tests/integration/test_pipeline.py` | Planificado |
+| 1.4 | HU-020, HU-017 | Persistencia SQLite + pipeline completo | §4, §7 | `tests/integration/test_pipeline.py` | Planificado; HU-017 parcial por infraestructura base existente |
 
 > A medida que los slices avancen, esta tabla se actualizará reflejando el estado real de cada HU.
 
