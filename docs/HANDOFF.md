@@ -89,16 +89,40 @@ Ya está mergeado en `main` mediante PR #4.
 - `close()` ya no limpia el store (es compartido entre streams).
 - Tests en `TestFileStreamFrameStoreIntegration` cubren store/publish/flujo multi-stream.
 
+## Slice 1.1 / HU-005 — Ultralytics adapter
+
+### Rama actual (`feat/slice-1.1-ultralytics-adapter`)
+
+```text
+Pendiente de PR: `feat(detectors): add optional Ultralytics adapter for vehicle detection`
+```
+
+- `UltralyticsAdapter` en `src/gryps/plugins/detectors/vehicle_yolo/ultralytics_adapter.py`.
+- Wraplea un `ultralytics.YOLO` para usar como `InferenceAdapter` en `VehicleYOLOPlugin`.
+- No importa ultralytics a nivel módulo — solo usa conversiones Python estándar.
+- Tests con fakes de ultralytics (`FakeBoxes`, `FakeUltralyticsResults`, `FakeUltralyticsYOLO`).
+- `ultralytics` es dependencia opcional: `uv sync --extra ultralytics`.
+
+### Cómo usar
+
+```python
+from ultralytics import YOLO
+from gryps.plugins.detectors.vehicle_yolo import VehicleYOLOPlugin
+from gryps.plugins.detectors.vehicle_yolo.ultralytics_adapter import UltralyticsAdapter
+
+model = YOLO("yolov8n.pt")
+adapter = UltralyticsAdapter(model)
+plugin = VehicleYOLOPlugin(model=adapter)
+detections = plugin.detect(frame, metadata)
+```
+
 ## Próximo paso recomendado
 
-El `FrameStore` ya está integrado en `FileStream`. La frontera de pipeline queda lista para wiring end-to-end:
-`FileStream` → almacena en `FrameStore` → publica `NEW_FRAME` → `VehicleDetectorHandler` puede resolver frame y detectar cuando se conecte en composición.
+Opciones razonables:
 
-Próximas opciones razonables:
-
-1. `feat/slice-1.1-ultralytics-adapter` — agregar adapter real opcional de Ultralytics, sin pesos en Git.
-2. `feat/slice-1.2-plate-detector` — comenzar con detector de placas (HU-004).
-3. `feat/slice-1.1-stream-registry` — integration test end-to-end con `PipelineOrchestrator`.
+1. `feat/slice-1.2-plate-detector` — comenzar con detector de placas (HU-004).
+2. `feat/slice-1.1-stream-registry` — integration test end-to-end con `PipelineOrchestrator`.
+3. `feat/slice-1.1-ultralytics-e2e` — integration test que instale ultralytics y pruebe el adapter real.
 
 ## Comandos útiles
 
@@ -114,7 +138,7 @@ git diff --check main...HEAD
 
 - No hay RTSP real todavía.
 - No hay `RTSPStream`.
-- No hay adapter real de Ultralytics todavía.
+- Ya hay adapter real opcional de Ultralytics (ver abajo).
 - No hay pesos YOLO en el repo.
 - No hay tracking persistente todavía.
 - `VEHICLE_DETECTED` conserva `stream_id`/`frame_id` en el evento; el payload contiene solo la detección serializable.
