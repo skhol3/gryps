@@ -17,6 +17,9 @@ dev = [
 ultralytics = [
     "ultralytics>=8.0.0",
 ]
+paddleocr = [
+    "paddleocr>=3.0.0",
+]
 
 [project.scripts]
 gryps = "gryps.__main__:main"
