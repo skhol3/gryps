@@ -113,6 +113,7 @@ class TestVehicleDetectorHandler:
         assert event.event_type == "VEHICLE_DETECTED"
         assert event.stream_id == "cam_01"
         assert event.frame_id == 7
+        assert event.payload["frame_ref"] == "mem://cam_01/0"
         assert event.payload["bbox"] == [10.0, 20.0, 30.0, 40.0]
         assert event.payload["class_name"] == "car"
         assert event.payload["confidence"] == 0.91
@@ -190,6 +191,7 @@ class TestVehicleDetectorHandler:
         assert len(captured) == 1
         raw_keys = {"data", "frame", "image", "ndarray", "bytes", "raw"}
         assert raw_keys.isdisjoint(captured[0].payload)
+        assert captured[0].payload["frame_ref"] == "mem://cam_01/0"
 
     def test_event_id_and_timestamp_are_set(self) -> None:
         bus = LocalEventBus()

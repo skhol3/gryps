@@ -1,0 +1,5 @@
+name: plate_detector
+version: 0.1.0
+type: detector
+entrypoint: plugin.py
+class: PlateDetectorPlugin

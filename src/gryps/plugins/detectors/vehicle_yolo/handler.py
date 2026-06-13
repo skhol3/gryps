@@ -48,11 +48,13 @@ class VehicleDetectorHandler:
         detections = self._detector.detect(frame, metadata)
 
         for result in detections:
+            payload = result.to_payload()
+            payload["frame_ref"] = frame_ref
             self._bus.publish(
                 Event.create(
                     stream_id=event.stream_id,
                     frame_id=event.frame_id,
                     event_type="VEHICLE_DETECTED",
-                    payload=result.to_payload(),
+                    payload=payload,
                 ),
             )
